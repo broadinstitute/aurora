@@ -23,6 +23,7 @@ import os
 
 from twitter.common import app, log
 from twitter.common.log.options import LogOptions
+from twitter.common.quantity import Amount, Time
 
 from apache.aurora.executor.aurora_executor import AuroraExecutor
 from apache.aurora.executor.common.announcer import DefaultAnnouncerCheckerProvider
@@ -99,6 +100,15 @@ app.add_option(
     default=False)
 
 
+app.add_option(
+    '--task_wait_seconds',
+    dest='runner_wait_seconds',
+    type=int,
+    default=60,
+    help='Timeout value for Thermos when waiting on a task to start or stop.'
+)
+
+
 # TODO(wickman) Consider just having the OSS version require pip installed
 # thermos_runner binaries on every machine and instead of embedding the pex
 # as a resource, shell out to one on the PATH.
@@ -144,7 +154,8 @@ def proxy_main():
       # If nosetuid is set, execute_as_user is also None
       thermos_runner_provider = UserOverrideThermosTaskRunnerProvider(
         dump_runner_pex(),
-        artifact_dir=os.path.abspath(CWD)
+        artifact_dir=os.path.abspath(CWD),
+        max_wait=Amount(options.runner_wait_seconds, Time.SECONDS)
       )
       thermos_runner_provider.set_role(None)
 
@@ -156,7 +167,8 @@ def proxy_main():
     else:
       thermos_runner_provider = DefaultThermosTaskRunnerProvider(
         dump_runner_pex(),
-        artifact_dir=os.path.abspath(CWD)
+        artifact_dir=os.path.abspath(CWD),
+        max_wait=Amount(options.runner_wait_seconds, Time.SECONDS)
       )
 
       thermos_executor = AuroraExecutor(
